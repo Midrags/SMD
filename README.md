@@ -10,6 +10,8 @@ Need help? Reach out to me on the discord server and we'll sort it out: https://
 
 ## Quick start
 
+Before doing anything after you install it first thing to do just to make sure everything works run `pip install -r requirements.txt`
+
 **If you have the EXE**  
 Run SMD.exe and follow the prompts. You'll need GreenLuma installed; see the Setup Guide for the download link.
 
