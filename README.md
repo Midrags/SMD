@@ -15,7 +15,7 @@ Run SMD.exe and follow the prompts. You'll need GreenLuma installed; see the Set
 
 **If you use Python**  
 1. Install dependencies: `pip install -r requirements.txt`  
-2. Run: `python Main.py`  
+2. Run: `python Main.py`  or use `simple_build.bat` to get exe instead of using python everytime.
 3. Optional (Windows desktop notifications): `pip install -r requirements-optional.txt`
 
 **GreenLuma**  
