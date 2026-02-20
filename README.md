@@ -32,6 +32,13 @@ Extract the ZIP and use the AppList folder from GreenLuma when SMD asks for it. 
 - Other features: multiplayer fixes (online-fix.me), DLC status check, cracking (gbe_fork), SteamStub DRM removal (Steamless), AppList management, and DLC Unlockers (CreamInstaller-style: SmokeAPI, CreamAPI, Koaloader, Uplay).  
 - Parallel downloads, backups, recent files, and settings export/import.
 
+## Download
+
+- **HTTPS:** `git clone https://github.com/Midrags/SMD_2.git`
+- **GitHub CLI:** `gh repo clone Midrags/SMD_2`
+
+Then go into the project folder and see [Quick start](#quick-start) below.
+
 ## Documentation
 
 [Documentation index](docs/README.md) – Start here.
