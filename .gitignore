@@ -1,0 +1,24 @@
+# Never commit these (contain paths, passwords, or generated data)
+settings.bin
+settings_export.json
+debug.log
+crash.log
+recent_files.json
+api_cache.json
+analytics.json
+# Build and caches
+build/
+dist/
+.hypothesis/
+.pytest_cache/
+htmlcov/
+__pycache__/
+*.pyc
+# User data / local env (each user has their own)
+.venv/
+GreenLuma/
+dlc_unlocker_cache/
+backups/
+saved_lua/
+# Test temp
+tmp/
