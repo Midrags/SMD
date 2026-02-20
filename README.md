@@ -4,8 +4,6 @@ Quick thing before we start remember to exclude SMD folder Windows Security or a
 
 SMD helps you set up games to work with Steam using Lua files and related data. It writes the right files into your Steam folder so games and DLC can run. It does not replace or crack Steam itself.
 
-Need help? Reach out to me on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
-
 **Need help?** Check the [documentation](docs/README.md), the [Troubleshooting](docs/TROUBLESHOOTING.md) guide or just Reach out to jericjan on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
 
 ## Quick start
