@@ -10,7 +10,7 @@ You need Steam installed on your PC. SMD will ask for your Steam folder if it ca
 
 SMD works with GreenLuma. You need to download GreenLuma yourself and set it up.
 
-- Download GreenLuma: https://www.mediafire.com/file/a7jfz14htim55wk/GL.zip/file  
+- Download GreenLuma: https://www.up-4ever.net/h3vt78x7jdap  
 - Extract the ZIP and follow the instructions that come with GreenLuma.  
 - When SMD asks for the AppList folder, point it to the AppList folder inside your GreenLuma folder.
 
