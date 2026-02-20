@@ -50,19 +50,6 @@ Extract the ZIP and use the AppList folder from GreenLuma when SMD asks for it. 
 
 [Troubleshooting](docs/TROUBLESHOOTING.md) – Common problems and what to try.
 
-## Command line
-
-```bash
-python Main.py --version
-python Main.py --help
-python Main.py --file game.lua
-python Main.py --batch file1.lua file2.lua
-python Main.py --quiet
-python Main.py --dry-run
-python Main.py --auto-update
-python Main.py --export-ids output.txt
-```
-
 ## Credits
 
 **jericjan** – SMD/Steam Manifest Downloader was originaly made by jericjan and just modified by me adding more features etc.  
