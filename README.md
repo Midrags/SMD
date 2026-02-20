@@ -54,10 +54,12 @@ Extract the ZIP and use the AppList folder from GreenLuma when SMD asks for it. 
 
 ## Credits
 
-**jericjan** – SMD/Steam Manifest Downloader was originaly made by jericjan and just modified by me adding more features etc.  
+Original autor: **jericjan** – SMD/Steam Manifest Downloader was originaly made by jericjan and just modified by me adding more features etc.  
 
 Credit to RedPaper for the Broken Moon MIDI cover, originally arranged by U2 Akiyama and used in Touhou 7.5: Immaterial and Missing Power. Touhou 7.5 and its related assets are owned by Team Shanghai Alice and Twilight Frontier. SMD is not affiliated with, endorsed by, or sponsored by either party. All trademarks belong to their respective owners.
 
 **CreamInstaller** – The DLC Unlockers feature in SMD is inspired by and compatible with CreamInstaller. SMD does not ship CreamInstaller; it provides its own implementation that follows similar behavior.
+
+modified version by me of jericjan/SMD
 
 Use SMD at your own responsibility.
