@@ -4,9 +4,9 @@ Quick thing before we start remember to exclude SMD folder Windows Security or a
 
 SMD helps you set up games to work with Steam using Lua files and related data. It writes the right files into your Steam folder so games and DLC can run. It does not replace or crack Steam itself.
 
-**Use at your own risk.** This project is for educational use. You are responsible for how you use it.
+Need help? Reach out to me on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
 
-**Need help?** Check the [documentation](docs/README.md) and the [Troubleshooting](docs/TROUBLESHOOTING.md) guide.
+**Need help?** Check the [documentation](docs/README.md), the [Troubleshooting](docs/TROUBLESHOOTING.md) guide or just Reach out to jericjan on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
 
 ## Quick start
 
@@ -20,7 +20,7 @@ Run SMD.exe and follow the prompts. You'll need GreenLuma installed; see the Set
 
 **GreenLuma**  
 SMD works with GreenLuma. You need to download and set up GreenLuma yourself:  
-https://www.mediafire.com/file/a7jfz14htim55wk/GL.zip/file  
+(https://www.up-4ever.net/h3vt78x7jdap)
 
 Extract the ZIP and use the AppList folder from GreenLuma when SMD asks for it. Full steps are in the [Setup Guide](docs/SETUP_GUIDE.md).
 
@@ -65,9 +65,9 @@ python Main.py --export-ids output.txt
 
 ## Credits
 
-**SMD** – Steam Manifest Downloader.  
+**jericjan** – SMD/Steam Manifest Downloader was originaly made by jericjan and just modified by me adding more features etc.  
 
-**Midrags** – For this build and distribution.  
+Credit to RedPaper for the Broken Moon MIDI cover, originally arranged by U2 Akiyama and used in Touhou 7.5: Immaterial and Missing Power. Touhou 7.5 and its related assets are owned by Team Shanghai Alice and Twilight Frontier. SMD is not affiliated with, endorsed by, or sponsored by either party. All trademarks belong to their respective owners.
 
 **CreamInstaller** – The DLC Unlockers feature in SMD is inspired by and compatible with CreamInstaller. SMD does not ship CreamInstaller; it provides its own implementation that follows similar behavior.
 
