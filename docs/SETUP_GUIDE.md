@@ -45,4 +45,4 @@ If the project includes a batch file for online-fix requirements, run it. Otherw
 - "Selenium not installed" — Run the pip install command above.  
 - "Login failed" — Check your online-fix.me username and password on their website.
 
-For more problems, see the [Troubleshooting](TROUBLESHOOTING.md) guide.
+If you run into other problems, check the error message and debug.log in the SMD folder, or ask on Discord.

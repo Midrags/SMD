@@ -53,7 +53,8 @@ gevent==25.9.1
     #   gevent-eventemitter
     #   steam
 gevent-eventemitter==2.1
-    # via steam
+    # via steam, steam-manifest-decrypt (pyproject.toml)
+    # Required for Steam client. Do NOT install the "eventemitter" package (name collision causes startup crash).
 greenlet==3.2.4
     # via gevent
 grpcio==1.75.1

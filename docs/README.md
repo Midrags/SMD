@@ -32,9 +32,6 @@ Parallel downloads, settings backup, library scanner, and other features.
 [Multiplayer Fix](MULTIPLAYER_FIX.md)  
 How to use the online fix feature for multiplayer games.
 
-[Troubleshooting](TROUBLESHOOTING.md)  
-Common problems and how to fix them.
-
 [DLC Unlockers](dlc_unlockers/README.md)  
 Using SMD to install DLC unlockers (CreamInstaller-style). Credits for CreamInstaller are on that page.
 

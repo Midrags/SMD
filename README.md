@@ -4,7 +4,7 @@ Quick thing before we start remember to exclude SMD folder Windows Security or a
 
 SMD helps you set up games to work with Steam using Lua files and related data. It writes the right files into your Steam folder so games and DLC can run. It does not replace or crack Steam itself.
 
-**Need help?** Check the [documentation](docs/README.md), the [Troubleshooting](docs/TROUBLESHOOTING.md) guide or just Reach out to jericjan on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
+**Need help?** Check the [documentation](docs/README.md) or reach out to jericjan on the discord server and we'll sort it out: https://discord.gg/bK667akcjn
 
 ## Quick start
 
@@ -39,6 +39,10 @@ Extract the ZIP and use the AppList folder from GreenLuma when SMD asks for it. 
 
 Then go into the project folder and see [Quick start](#quick-start) below.
 
+## What's new
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in the latest update (including a fix for the startup crash some people had).
+
 ## Documentation
 
 [Documentation index](docs/README.md) – Start here.
@@ -54,8 +58,6 @@ Then go into the project folder and see [Quick start](#quick-start) below.
 [Multiplayer Fix](docs/MULTIPLAYER_FIX.md) – Using the online-fix.me multiplayer fix.
 
 [DLC Unlockers](docs/dlc_unlockers/README.md) – Using DLC unlockers (CreamInstaller-style).
-
-[Troubleshooting](docs/TROUBLESHOOTING.md) – Common problems and what to try.
 
 ## Credits
 

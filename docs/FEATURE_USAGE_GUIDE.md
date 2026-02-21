@@ -38,4 +38,4 @@ In menus you can often press a number to choose an option. Escape or Back goes b
 
 You can run SMD with extra options: for example `--batch file1.lua file2.lua` to process several files, or `--dry-run` to see what would happen without doing it. Run `python Main.py --help` to see all options.
 
-For step-by-step use of the main menu, see the [User Guide](USER_GUIDE.md). For problems, see [Troubleshooting](TROUBLESHOOTING.md).
+For step-by-step use of the main menu, see the [User Guide](USER_GUIDE.md). If something goes wrong, check the error message and the debug.log file in the SMD folder, or ask for help on Discord.

@@ -14,7 +14,7 @@ Run SMD, then choose "Apply multiplayer fix (online-fix.me)" or the equivalent f
 
 **If something goes wrong**
 
-If login fails, check your username and password on the online-fix.me website. If the game is not found, try the full official game name. If downloads or extraction fail, check your internet connection and antivirus. More solutions are in the [Troubleshooting](TROUBLESHOOTING.md) guide.
+If login fails, check your username and password on the online-fix.me website. If the game is not found, try the full official game name. If downloads or extraction fail, check your internet connection and antivirus. If it still fails, check debug.log in the SMD folder or ask for help on Discord.
 
 **Responsibility**
 

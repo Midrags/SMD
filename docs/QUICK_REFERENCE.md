@@ -39,4 +39,4 @@ Settings are stored in `settings.bin`. Recent files are in `recent_files.json`. 
 
 **Getting help**
 
-Read the error message first. Then check the [Troubleshooting](TROUBLESHOOTING.md) guide. For more detail on features, see the [User Guide](USER_GUIDE.md) and [Feature Guide](FEATURE_USAGE_GUIDE.md).
+Read the error message first. For more detail on features, see the [User Guide](USER_GUIDE.md) and [Feature Guide](FEATURE_USAGE_GUIDE.md).
