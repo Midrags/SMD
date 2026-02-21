@@ -6,10 +6,22 @@ This folder is a **consumer-ready** copy of SMD with no personal data in the cod
 
 - **settings.bin** – Stores your settings and (if you use them) encrypted passwords.
 - **settings_export.json** – Export of settings; can contain paths and usernames.
+- **credentials.json** – Online-fix.me login (if present); use **credentials.json.example** as a template only.
 - **debug.log**, **crash.log** – Logs that may contain paths.
 - **recent_files.json**, **api_cache.json**, **analytics.json** – Local caches.
 - **GreenLuma/**, **dlc_unlocker_cache/**, **backups/**, **saved_lua/** – Your own data.
 - **build/**, **dist/** – Build outputs.
+- **.git/** – Version control (not needed in the zip).
+
+## Making a release zip for GitHub
+
+When zipping this folder to upload to a release, **do not include** the files and folders listed above. Easiest: use `git archive` so only tracked files are in the zip (no .git, no local files):
+
+```bash
+git archive --format=zip --output=SMD_2-v4.5.1.zip v4.5.1
+```
+
+Then upload **SMD_2-v4.5.1.zip** to the release. If you zip by hand, exclude everything in the "Never commit or upload" list and the **.git** folder.
 
 The **.gitignore** in this folder is already set so that these are ignored if you use Git.
 

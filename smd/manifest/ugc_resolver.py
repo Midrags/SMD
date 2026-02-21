@@ -1,4 +1,5 @@
 import logging
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, List, Optional, Union
@@ -85,23 +86,36 @@ class StandardUgcIdStrategy(IUgcIdStrategy):
         details = resp.body.publishedfiledetails
         return details[0]
 
+    _MAX_UGC_RETRIES = 3
+
     def _get_workshop_items_details(self, ctx: WorkshopItemContext):
         if not ctx.client.logged_on:
             print("Logging in anonymously...", end="", flush=True)
             ctx.client.anonymous_login()
             print(" Done!")
-        while True:
+        last_error = None
+        for attempt in range(1, self._MAX_UGC_RETRIES + 1):
             try:
                 resp = self._send_request(ctx.client, ctx.workshop_id)
                 return resp
-            except gevent.Timeout:
-                print("Request timed out. Trying again")
-                try:
-                    ctx.client.anonymous_login()  # might fix the endless timeout loop
-                except RuntimeError:  # Alr logged in error
-                    pass
-                continue
-            break
+            except gevent.Timeout as e:
+                last_error = e
+                if attempt < self._MAX_UGC_RETRIES:
+                    print(f"Request timed out. Trying again ({attempt}/{self._MAX_UGC_RETRIES})...")
+                    try:
+                        ctx.client.anonymous_login()
+                    except RuntimeError:
+                        pass
+                    time.sleep(2)
+                else:
+                    print(
+                        "Request timed out after several attempts. "
+                        "Check your internet connection and try again later."
+                    )
+                    raise
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Unexpected: no response and no error")
 
     def get_content(self, ctx: WorkshopItemContext) -> Optional[WorkshopContent]:
         details = self._get_workshop_items_details(ctx)

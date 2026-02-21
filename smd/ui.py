@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import time
+import webbrowser
 import zipfile
 from collections import OrderedDict
 from enum import Enum
@@ -58,7 +59,7 @@ from smd.storage.settings import (
     set_setting,
 )
 from smd.storage.vdf import get_steam_libs, vdf_dump, vdf_load
-from smd.strings import LINUX_RELEASE_PREFIX, VERSION, WINDOWS_RELEASE_PREFIX
+from smd.strings import LINUX_RELEASE_PREFIX, RELEASE_PAGE_URL, VERSION, WINDOWS_RELEASE_PREFIX
 from smd.structs import (
     ContextMenuOptions,
     GameSpecificChoices,
@@ -67,13 +68,12 @@ from smd.structs import (
     MainReturnCode,
     MidiFiles,
     OSType,
-    ReleaseType,
     SettingCustomTypes,
     SettingOperations,
     Settings,
     SettingsManagementOptions,
 )
-from smd.updater import Updater
+from smd.updater import Updater, is_newer_version
 from smd.utils import enter_path, root_folder
 from smd.zip import zip_folder
 
@@ -814,59 +814,57 @@ class UI:
         return MainReturnCode.LOOP_NO_PROMPT
 
     def check_updates(self, os_type: OSType, test: bool = False) -> MainReturnCode:
-        if self.os_type == OSType.LINUX:
-            print("Updating isn't supported yet on linux.")
-            return MainReturnCode.LOOP_NO_PROMPT
-
-        if not getattr(sys, "frozen", False):
-            print("Program isn't frozen. You can't update.")
-            return MainReturnCode.LOOP_NO_PROMPT
-
-        release_type: Optional[ReleaseType] = prompt_select(
-            "Which type of release would you like to update to?",
-            list(ReleaseType),
-            cancellable=True,
-        )
-        if release_type is None:
-            return MainReturnCode.LOOP_NO_PROMPT
-        print("Making request to github...", end="", flush=True)
-        if release_type == ReleaseType.STABLE:
-            resp = Updater.get_latest_stable()
-        elif release_type == ReleaseType.PRERELEASE:
-            resp = Updater.get_latest_prerelease()
-        print("Done!")
+        print("Checking for updates (GitHub releases)...", end="", flush=True)
+        is_newer, resp = Updater.update_available()
+        print(" Done!")
         if resp is None:
-            print("Could not find a release that matched your request :(")
+            print("Could not fetch latest release (check your connection or the releases page).")
             return MainReturnCode.LOOP_NO_PROMPT
-        remote_version = resp.get("tag_name")
-        print(f"Your Version: {VERSION}")
-        print(f"Latest Version: {remote_version}")
-        if VERSION == remote_version and test is False:
-            print(Fore.GREEN + "You're up to date!" + Style.RESET_ALL)
+        remote_version = (resp.get("tag_name") or "").strip()
+        print(f"Your version: {VERSION}")
+        print(f"Latest version: {remote_version}")
+        if not is_newer and not test:
+            print(Fore.GREEN + "You're already on the latest version." + Style.RESET_ALL)
             return MainReturnCode.LOOP_NO_PROMPT
-        print(Fore.RED + "Your SMD is outdated." + Style.RESET_ALL)
-        if not prompt_confirm("Would you like to update?"):
+        if not is_newer and test:
+            print(Fore.GREEN + "Version check only: no newer release." + Style.RESET_ALL)
             return MainReturnCode.LOOP_NO_PROMPT
-        download_url = enter_path(resp, "assets", 0, "browser_download_url")
-        assets = resp.get("assets")
-        if assets is None:
-            print("This release has no files attached.")
+        print(Fore.YELLOW + "A newer version is available." + Style.RESET_ALL)
+        release_url = resp.get("html_url") or RELEASE_PAGE_URL
+        is_frozen = getattr(sys, "frozen", False)
+        if not is_frozen:
+            if prompt_confirm("Open the release page in your browser to download?"):
+                webbrowser.open(release_url)
+            return MainReturnCode.LOOP_NO_PROMPT
+        if self.os_type == OSType.LINUX:
+            print("Auto-update is not supported on Linux. Open the release page to download.")
+            if prompt_confirm("Open the release page in your browser?"):
+                webbrowser.open(release_url)
+            return MainReturnCode.LOOP_NO_PROMPT
+        if not prompt_confirm("Would you like to update now? (Otherwise you can open the release page to download.)"):
+            return MainReturnCode.LOOP_NO_PROMPT
+        assets = resp.get("assets") or []
+        if os_type == OSType.WINDOWS:
+            target_prefix = WINDOWS_RELEASE_PREFIX
+        elif os_type == OSType.LINUX:
+            target_prefix = LINUX_RELEASE_PREFIX
+        else:
+            print("Unsupported OS. Opening release page.")
+            webbrowser.open(release_url)
             return MainReturnCode.LOOP_NO_PROMPT
         download_url = None
         for asset in assets:
-            if os_type == OSType.WINDOWS:
-                target_prefix = WINDOWS_RELEASE_PREFIX
-            elif os_type == OSType.LINUX:
-                target_prefix = LINUX_RELEASE_PREFIX
-            else:
-                print("Unsupported OS. Cannot update.")
-                return MainReturnCode.LOOP_NO_PROMPT
+            name = (asset.get("name") or "").lower()
             url = asset.get("browser_download_url")
-            if url and url.startswith(target_prefix):
+            if not url:
+                continue
+            if name.startswith(target_prefix.lower()) or target_prefix.lower() in name:
                 download_url = url
                 break
         if not download_url:
-            print("Couldn't find the download URL :(")
+            print("No update package found for your OS. Opening release page so you can download manually.")
+            if prompt_confirm("Open the release page in your browser?"):
+                webbrowser.open(release_url)
             return MainReturnCode.LOOP_NO_PROMPT
         print(f"Download URL: {download_url}")
         aria2c_exe = root_folder() / "third_party/aria2c/aria2c.exe"

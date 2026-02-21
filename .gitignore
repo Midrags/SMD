@@ -1,6 +1,7 @@
 # Never commit these (contain paths, passwords, or generated data)
 settings.bin
 settings_export.json
+credentials.json
 debug.log
 crash.log
 recent_files.json

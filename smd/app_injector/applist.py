@@ -14,6 +14,7 @@ from smd.lua.writer import ConfigVDFWriter
 from smd.manifest.downloader import ManifestDownloader
 from smd.prompts import prompt_confirm, prompt_dir, prompt_select, prompt_text
 from smd.steam_client import ParsedDLC, SteamInfoProvider, get_product_info
+from smd.steam_store import get_dlc_list_from_store, get_dlc_names_from_store
 from smd.storage.settings import get_setting, set_setting
 from smd.structs import (
     AppIDInfo,
@@ -441,9 +442,53 @@ class AppListManager(AppInjectionManager):
         all_paths = [x.path for x in path_and_ids]
         self.delete_paths(paths_to_delete, all_paths)
 
+    def _dlc_check_via_store(self, base_id: int) -> None:
+        """DLC check using Steam Store API only (no Steam client login). Fallback when Steam API fails."""
+        print("Using Steam Store (no login required)...")
+        result = get_dlc_list_from_store(base_id)
+        if not result:
+            print("Could not load DLC list from Steam Store. Try again later.")
+            return
+        base_name, dlc_ids = result
+        if not dlc_ids:
+            print("This game has no DLC.")
+            return
+        print(f"Found {len(dlc_ids)} DLC(s). Fetching names...")
+        names = get_dlc_names_from_store(dlc_ids)
+        local_ids = {x.app_id for x in self.get_local_ids()}
+        console = Console()
+        table = Table(
+            "ID",
+            "Name",
+            Column(header="In AppList?", justify="center"),
+        )
+        not_in_applist: list[int] = []
+        for app_id in dlc_ids:
+            in_list = app_id in local_ids
+            if not in_list:
+                not_in_applist.append(app_id)
+            table.add_row(
+                str(app_id),
+                names.get(app_id, f"DLC {app_id}"),
+                "[green]O[/green]" if in_list else "[red]X[/red]",
+            )
+        console.print(table)
+        if not_in_applist:
+            print("Some DLCs are not in the AppList.")
+            if prompt_confirm("Do you want to add these to the AppList?"):
+                self.add_ids(not_in_applist, skip_check=False)
+        else:
+            print("All DLCs are in the AppList.")
+
     def dlc_check(self, provider: SteamInfoProvider, base_id: int):
         print("Checking for DLC...")
-        base_info = get_product_info(provider, [base_id])
+        try:
+            base_info = get_product_info(provider, [base_id])
+        except Exception as e:
+            logger.debug("Steam API failed for DLC check: %s", e)
+            print("Steam connection failed. Using Steam Store instead (no login)...")
+            self._dlc_check_via_store(base_id)
+            return
         base_info_trimmed = enter_path(base_info, "apps", base_id)
         dlcs = enter_path(base_info_trimmed, "extended", "listofdlc")
         logger.debug(f"listofdlc: {dlcs}")
@@ -452,7 +497,13 @@ class AppListManager(AppInjectionManager):
         else:
             assert isinstance(dlcs, str)
             dlcs = [int(x) for x in dlcs.split(",")]
-            dlc_info = get_product_info(provider, dlcs)
+            try:
+                dlc_info = get_product_info(provider, dlcs)
+            except Exception as e:
+                logger.debug("Steam API failed for DLC details: %s", e)
+                print("Steam connection failed. Using Steam Store instead (no login)...")
+                self._dlc_check_via_store(base_id)
+                return
             config = ConfigVDFWriter(self.steam_path)
             manifest = ManifestDownloader(self.provider, self.steam_path)
             if dlc_info:

@@ -19,6 +19,9 @@ def get_product_info(provider: "SteamInfoProvider", app_ids: list[int]) -> Produ
     return ProductInfo({"apps": provider.get_app_info(app_ids), "packages": {}})
 
 
+_MAX_APP_INFO_RETRIES = 3
+
+
 def _get_product_info(client: SteamClient, app_ids: list[int]) -> ProductInfo:
     if len(app_ids) == 0:
         raise ValueError("app_ids cannot be empty.")
@@ -26,7 +29,8 @@ def _get_product_info(client: SteamClient, app_ids: list[int]) -> ProductInfo:
         print("Logging in anonymously...", end="", flush=True)
         client.anonymous_login()
         print(" Done!")
-    while True:
+    last_error = None
+    for attempt in range(1, _MAX_APP_INFO_RETRIES + 1):
         try:
             print("Getting app info...")
             logger.debug(f"Getting info for {', '.join([str(x) for x in app_ids])}")
@@ -37,16 +41,22 @@ def _get_product_info(client: SteamClient, app_ids: list[int]) -> ProductInfo:
             # only none when app_ids is empty, which never happens
             assert info is not None
             logger.debug(f"Product info request took: {time.time() - start}s")
-        except gevent.Timeout:
-            print("Request timed out. Trying again")
-            try:
-                client.anonymous_login()  # might fix the endless timeout loop
-            except RuntimeError:  # Alr logged in error
-                pass
-            continue
-        break
-    logger.debug(f"get_product_info returned: {json.dumps(info)}")
-    return ProductInfo(info)
+            return ProductInfo(info)
+        except gevent.Timeout as e:
+            last_error = e
+            if attempt < _MAX_APP_INFO_RETRIES:
+                print(f"Request timed out. Trying again ({attempt}/{_MAX_APP_INFO_RETRIES})...")
+                try:
+                    client.anonymous_login()
+                except RuntimeError:
+                    pass
+                time.sleep(2)
+            else:
+                print(
+                    "Request timed out after several attempts. "
+                    "Check your internet connection and Steam status, then try again later."
+                )
+                raise
 
 
 class SteamInfoProvider:
