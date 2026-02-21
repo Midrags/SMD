@@ -30,6 +30,7 @@ from smd.prompts import (
     prompt_text,
 )
 from smd.steam_client import SteamInfoProvider, get_product_info
+from smd.steam_store import get_app_details_from_store
 from smd.storage.settings import get_setting, set_setting
 from smd.storage.vdf import vdf_load
 from smd.structs import (
@@ -432,16 +433,25 @@ class GameHandler:
         print("This will download and apply a multiplayer fix for the selected game.")
         print("The fix will be extracted directly to the game folder.\n")
 
-        # Get game name from ACF
-        acf_path = self.steamapps_path / f"appmanifest_{app_info.app_id}.acf"
+        # Get game name: ACF from the same library as the game folder (not default steamapps)
         game_name = "Unknown"
-        
+        steamapps_for_game = app_info.path.parent.parent  # path is .../steamapps/common/GameName
+        acf_path = steamapps_for_game / f"appmanifest_{app_info.app_id}.acf"
         if acf_path.exists():
             try:
                 acf_data = vdf_load(acf_path)
                 game_name = acf_data.get("AppState", {}).get("name", "Unknown")
             except Exception as e:
                 logger.warning(f"Failed to read game name from ACF: {e}")
+
+        # Fallback: fetch official name from Steam Store API (like Mango) so search finds the right game
+        if not game_name or game_name == "Unknown":
+            try:
+                details = get_app_details_from_store(int(app_info.app_id))
+                if details and details.get("name"):
+                    game_name = details["name"].strip()
+            except Exception as e:
+                logger.debug("Steam Store API fallback for game name: %s", e)
 
         print(f"Game: {Fore.YELLOW}{game_name}{Style.RESET_ALL}")
         print(f"Folder: {Fore.YELLOW}{app_info.path}{Style.RESET_ALL}\n")

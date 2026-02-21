@@ -391,9 +391,12 @@ def apply_multiplayer_fix(game_name: str, game_folder: Path) -> bool:
 
         wait = WebDriverWait(driver, 15)
 
-        # Search for game
-        clean_name = re.sub(r"[^\w\s]", "", game_name)
-        search_url = f"{ONLINE_FIX_BASE_URL}/index.php?do=search&subaction=search&story={quote(clean_name)}"
+        # Search for game (add "online-fix" to narrow results and get the right fix page)
+        clean_name = re.sub(r"[^\w\s]", "", game_name).strip()
+        if not clean_name:
+            clean_name = game_name.strip() or "unknown"
+        search_query = f"{clean_name} online-fix"
+        search_url = f"{ONLINE_FIX_BASE_URL}/index.php?do=search&subaction=search&story={quote(search_query)}"
 
         print()
         print(Fore.CYAN + "=" * 60 + Style.RESET_ALL)
@@ -417,6 +420,9 @@ def apply_multiplayer_fix(game_name: str, game_folder: Path) -> bool:
             return False
 
         game_lower = game_name.lower()
+        clean_lower = re.sub(r"[^\w\s]", "", game_lower).strip()
+        # Require at least 0.5 (50%) so we don't accept wrong games like "Species Unknown" for "Unknown"
+        MIN_RATIO = 0.5
         best = None
         best_ratio = 0.0
 
@@ -433,16 +439,19 @@ def apply_multiplayer_fix(game_name: str, game_folder: Path) -> bool:
                     continue
 
                 ratio = SequenceMatcher(None, game_lower, text).ratio()
+                # Prefer results whose text contains the core game name (e.g. "repo" in "r.e.p.o. по сети")
+                if clean_lower and clean_lower in re.sub(r"[^\w\s]", "", text).lower():
+                    ratio = max(ratio, 0.6)
                 if ratio > best_ratio:
                     best_ratio = ratio
                     best = anchor
             except Exception:
                 pass
 
-        if not best or best_ratio < 0.2:
+        if not best or best_ratio < MIN_RATIO:
             print()
-            print(Fore.RED + f"✗ No suitable match found for '{game_name}'" + Style.RESET_ALL)
-            print(Fore.YELLOW + "  Try checking the game name or search manually on online-fix.me" + Style.RESET_ALL)
+            print(Fore.RED + f"✗ No suitable match found for '{game_name}' (best was {best_ratio*100:.0f}%, need {MIN_RATIO*100:.0f}%)" + Style.RESET_ALL)
+            print(Fore.YELLOW + "  Try searching manually on online-fix.me for your game." + Style.RESET_ALL)
             return False
 
         match_text = best.text.strip() if best.text else "Unknown"
