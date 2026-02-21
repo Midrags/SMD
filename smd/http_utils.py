@@ -3,6 +3,7 @@ import logging
 import sys
 from contextlib import contextmanager
 from tempfile import TemporaryFile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator, Literal, Optional, Union, overload
 from urllib.parse import urlparse
 
@@ -223,3 +224,42 @@ def download_to_tempfile(
         yield None
     finally:
         temp_f.close()
+
+
+def download_to_path(
+    url: str,
+    path: Path,
+    headers: Optional[dict[str, str]] = None,
+    chunk_size: int = (1024**2) // 2,
+) -> bool:
+    """Download url to the given path. Shows progress with tqdm. Returns True on success."""
+    try:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with httpx.stream(
+            "GET",
+            url,
+            headers=headers or {},
+            follow_redirects=True,
+            timeout=None,
+        ) as response:
+            response.raise_for_status()
+            try:
+                total = int(response.headers.get("Content-Length", "0"))
+            except (ValueError, TypeError):
+                total = 0
+            with path.open("wb") as f, tqdm(
+                desc="Downloading",
+                total=total or None,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                miniters=1,
+            ) as pbar:
+                for chunk in response.iter_bytes(chunk_size=chunk_size):
+                    f.write(chunk)
+                    pbar.update(len(chunk))
+        return True
+    except httpx.HTTPError as e:
+        print(f"Download error: {repr(e)}")
+        return False

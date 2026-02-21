@@ -1,6 +1,15 @@
 # Changelog
 
-## v4.5.3 (latest)
+## v4.5.4 (latest)
+
+### Check for updates – automatic install
+
+- **Automatic update:** When a newer version is available, you can choose "Download and update automatically?". SMD downloads the release zip, extracts it, and replaces the files in your install folder. When running from **source** (Python), the app restarts with the new version. When running from the **EXE**, SMD does not relaunch the EXE; it tells you to rebuild the EXE so the new updates take effect.
+- Updates use the same folder as your current install, so no manual copying or extracting is needed.
+
+---
+
+## v4.5.3
 
 ### Multiplayer fix (online-fix.me) – correct game and better matching
 

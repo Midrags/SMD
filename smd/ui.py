@@ -18,6 +18,7 @@ from smd.app_injector.applist import AppListManager
 from smd.app_injector.sls import SLSManager
 from smd.analytics import get_analytics_tracker
 from smd.game_specific import GameHandler
+from smd.http_utils import download_to_path
 from smd.library_scanner import LibraryScanner
 from smd.lua.manager import LuaManager
 from smd.lua.writer import ACFWriter, ConfigVDFWriter
@@ -832,93 +833,201 @@ class UI:
         print(Fore.YELLOW + "A newer version is available." + Style.RESET_ALL)
         release_url = resp.get("html_url") or RELEASE_PAGE_URL
         is_frozen = getattr(sys, "frozen", False)
-        if not is_frozen:
-            if prompt_confirm("Open the release page in your browser to download?"):
-                webbrowser.open(release_url)
-            return MainReturnCode.LOOP_NO_PROMPT
-        if self.os_type == OSType.LINUX:
-            print("Auto-update is not supported on Linux. Open the release page to download.")
-            if prompt_confirm("Open the release page in your browser?"):
-                webbrowser.open(release_url)
-            return MainReturnCode.LOOP_NO_PROMPT
-        if not prompt_confirm("Would you like to update now? (Otherwise you can open the release page to download.)"):
-            return MainReturnCode.LOOP_NO_PROMPT
         assets = resp.get("assets") or []
+        # Prefer OS-specific package for frozen Windows; else use any release .zip (e.g. SMD_2-vX.Y.Z.zip)
+        download_url = None
+        asset_name = None
+        use_os_package = False
         if os_type == OSType.WINDOWS:
             target_prefix = WINDOWS_RELEASE_PREFIX
         elif os_type == OSType.LINUX:
             target_prefix = LINUX_RELEASE_PREFIX
         else:
-            print("Unsupported OS. Opening release page.")
-            webbrowser.open(release_url)
-            return MainReturnCode.LOOP_NO_PROMPT
-        download_url = None
+            target_prefix = ""
         for asset in assets:
-            name = (asset.get("name") or "").lower()
+            name = asset.get("name") or ""
             url = asset.get("browser_download_url")
             if not url:
                 continue
-            if name.startswith(target_prefix.lower()) or target_prefix.lower() in name:
+            name_lower = name.lower()
+            if is_frozen and os_type == OSType.WINDOWS and (
+                name_lower.startswith(target_prefix.lower()) or target_prefix.lower() in name_lower
+            ):
                 download_url = url
+                asset_name = name
+                use_os_package = True
                 break
-        if not download_url:
-            print("No update package found for your OS. Opening release page so you can download manually.")
+        if not use_os_package:
+            for asset in assets:
+                name = asset.get("name") or ""
+                url = asset.get("browser_download_url")
+                if url and name.lower().endswith(".zip"):
+                    download_url = url
+                    asset_name = name
+                    break
+
+        app_dir = root_folder(outside_internal=True)
+        update_zip = app_dir / "update.zip"
+        tmp_update = app_dir / "tmp_update"
+
+        def _do_auto_update() -> bool:
+            """Download zip, extract to tmp_update, run updater script that replaces app dir and relaunches. Returns True if started."""
+            if not download_url or not asset_name:
+                return False
+            print(f"Downloading {asset_name}...")
+            if not download_to_path(download_url, update_zip):
+                return False
+            print("Extracting...")
+            if tmp_update.exists():
+                shutil.rmtree(tmp_update, ignore_errors=True)
+            tmp_update.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(update_zip) as zf:
+                zf.extractall(tmp_update)
+            # If zip had a single top-level folder (e.g. SMD_2-v4.5.3/), flatten so copy source is the contents
+            entries = list(tmp_update.iterdir())
+            if len(entries) == 1 and entries[0].is_dir():
+                inner = entries[0]
+                for p in inner.iterdir():
+                    shutil.move(str(p), str(tmp_update / p.name))
+                inner.rmdir()
+            # Now tmp_update has Main.py, smd/, etc. at top level. Updater script copies to app_dir.
+            if sys.platform == "win32":
+                # When frozen (EXE), do not relaunch EXE—user must rebuild for updates to take effect.
+                main_py = app_dir / "Main.py"
+                run_cmd = app_dir / "update_run.cmd"
+                if is_frozen:
+                    post_update = (
+                        "echo Update complete. Rebuild the EXE to use the new version.\n"
+                        "pause\n"
+                    )
+                else:
+                    run_cmd.write_text(
+                        f'start "" "{sys.executable}" "{main_py.resolve()}"',
+                        encoding="utf-8",
+                    )
+                    post_update = (
+                        "call " + subprocess.list2cmdline([str(run_cmd)]) + "\n"
+                        "del /q " + subprocess.list2cmdline([str(run_cmd)]) + " 2>nul\n"
+                    )
+                updater_bat = app_dir / "tmp_updater.bat"
+                updater_bat.write_text(
+                    "@echo off\n"
+                    "cd /d " + subprocess.list2cmdline([str(app_dir.resolve())]) + "\n"
+                    "timeout /t 2 /nobreak >nul\n"
+                    "robocopy " + subprocess.list2cmdline([str(tmp_update), str(app_dir)]) + " /E /MOVE >nul 2>&1\n"
+                    "rmdir /s /q " + subprocess.list2cmdline([str(tmp_update)]) + " 2>nul\n"
+                    "del /q " + subprocess.list2cmdline([str(update_zip)]) + " 2>nul\n"
+                    + post_update +
+                    '(goto) 2>nul & del "%~f0"\n',
+                    encoding="utf-8",
+                )
+                subprocess.Popen(
+                    ["cmd", "/c", str(updater_bat)],
+                    creationflags=subprocess.DETACHED_PROCESS,
+                    cwd=str(app_dir),
+                )
+            else:
+                # When frozen, do not relaunch—user must rebuild. Otherwise relaunch via python Main.py.
+                if is_frozen:
+                    launcher_shell = "echo 'Update complete. Rebuild the executable to use the new version.'\n"
+                else:
+                    launcher_shell = "exec " + " ".join(shutil.quote(str(x)) for x in [sys.executable, str(app_dir / "Main.py")]) + "\n"
+                updater_sh = app_dir / "tmp_updater.sh"
+                updater_sh.write_text(
+                    "#!/bin/sh\n"
+                    "cd " + shutil.quote(str(app_dir.resolve())) + "\n"
+                    "sleep 2\n"
+                    "cp -r tmp_update/. .\n"
+                    "rm -rf tmp_update update.zip\n"
+                    + launcher_shell,
+                    encoding="utf-8",
+                )
+                updater_sh.chmod(0o700)
+                subprocess.Popen(
+                    ["/bin/sh", str(updater_sh)],
+                    cwd=str(app_dir),
+                    start_new_session=True,
+                )
+            print(Fore.GREEN + "Update will apply and the app will restart. Exiting..." + Style.RESET_ALL)
+            sys.exit(0)
+
+        if not is_frozen:
+            if download_url and prompt_confirm("Download and update automatically?"):
+                _do_auto_update()
             if prompt_confirm("Open the release page in your browser?"):
                 webbrowser.open(release_url)
             return MainReturnCode.LOOP_NO_PROMPT
-        print(f"Download URL: {download_url}")
-        aria2c_exe = root_folder() / "third_party/aria2c/aria2c.exe"
-        subprocess.run(
-            [
-                aria2c_exe,
-                "-x",
-                "64",
-                "-k",
-                "1K",
-                "-s",
-                "64",
-                "-d",
-                str(Path.cwd().resolve()),
-                download_url,
-            ]
-        )
-        zip_name = Path(download_url).name
-        print(
-            Fore.GREEN
-            + "\n\nThe cursed update is about to begin. Prepare yourself."
-            + Style.RESET_ALL
-        )
-        tmp_dir = Path.cwd() / "tmp"
-        zip_path = Path.cwd() / zip_name
-        with zipfile.ZipFile(zip_path) as zf:
-            zf.extractall(tmp_dir)
-        zip_path.unlink(missing_ok=True)
-        updater = Path.cwd() / "tmp_updater.bat"
-        with updater.open("w", encoding="utf-8") as f:
-            nul = [">", "NUL"]
-            internal_dir = str(Path.cwd() / "_internal")
-            smd_exe = str(Path.cwd() / "SMD.exe")
-            tmp_dir = str(Path.cwd() / "tmp")
-            convert = subprocess.list2cmdline
-            f.writelines(
+        if self.os_type == OSType.LINUX:
+            if download_url and prompt_confirm("Download and update automatically?"):
+                _do_auto_update()
+            if prompt_confirm("Open the release page in your browser?"):
+                webbrowser.open(release_url)
+            return MainReturnCode.LOOP_NO_PROMPT
+        if not prompt_confirm("Would you like to update now? (Otherwise you can open the release page to download.)"):
+            if prompt_confirm("Open the release page in your browser?"):
+                webbrowser.open(release_url)
+            return MainReturnCode.LOOP_NO_PROMPT
+        if use_os_package and download_url and asset_name:
+            # Frozen Windows with OS-specific package: full in-place update (aria2c + extract + bat)
+            print(f"Download URL: {download_url}")
+            aria2c_exe = root_folder() / "third_party/aria2c/aria2c.exe"
+            subprocess.run(
                 [
-                    "@echo off\n",
-                    "echo Killing SMD...\n",
-                    f"taskkill /F /PID {os.getpid()}\n",
-                    "echo SMD killed. Deleting old files...\n",
-                    convert(["rmdir", "/s", "/q", internal_dir, *nul]) + "\n",
-                    convert(["del", "/q", smd_exe, *nul]) + "\n",
-                    "echo Old files deleted. Moving in new files...\n",
-                    convert(["robocopy", "/E", "/MOVE", tmp_dir, str(Path.cwd()), *nul])
-                    + "\n",
-                    "echo UPDATE COMPLETE!!!! You can close this now\n",
-                    '(goto) 2>nul & del "%~f0"',
+                    aria2c_exe,
+                    "-x",
+                    "64",
+                    "-k",
+                    "1K",
+                    "-s",
+                    "64",
+                    "-d",
+                    str(Path.cwd().resolve()),
+                    download_url,
                 ]
             )
-        command = convert(["cmd", "/k", str(updater.resolve())])
-        subprocess.Popen(
-            command, creationflags=subprocess.DETACHED_PROCESS, shell=True  # type:ignore
-        )
+            zip_name = Path(download_url).name
+            print(
+                Fore.GREEN
+                + "\n\nThe cursed update is about to begin. Prepare yourself."
+                + Style.RESET_ALL
+            )
+            tmp_dir = Path.cwd() / "tmp"
+            zip_path = Path.cwd() / zip_name
+            with zipfile.ZipFile(zip_path) as zf:
+                zf.extractall(tmp_dir)
+            zip_path.unlink(missing_ok=True)
+            updater = Path.cwd() / "tmp_updater.bat"
+            with updater.open("w", encoding="utf-8") as f:
+                nul = [">", "NUL"]
+                internal_dir = str(Path.cwd() / "_internal")
+                smd_exe = str(Path.cwd() / "SMD.exe")
+                tmp_dir = str(Path.cwd() / "tmp")
+                convert = subprocess.list2cmdline
+                f.writelines(
+                    [
+                        "@echo off\n",
+                        "echo Killing SMD...\n",
+                        f"taskkill /F /PID {os.getpid()}\n",
+                        "echo SMD killed. Deleting old files...\n",
+                        convert(["rmdir", "/s", "/q", internal_dir, *nul]) + "\n",
+                        convert(["del", "/q", smd_exe, *nul]) + "\n",
+                        "echo Old files deleted. Moving in new files...\n",
+                        convert(["robocopy", "/E", "/MOVE", tmp_dir, str(Path.cwd()), *nul])
+                        + "\n",
+                        "echo UPDATE COMPLETE!!!! You can close this now\n",
+                        '(goto) 2>nul & del "%~f0"',
+                    ]
+                )
+            command = convert(["cmd", "/k", str(updater.resolve())])
+            subprocess.Popen(
+                command, creationflags=subprocess.DETACHED_PROCESS, shell=True  # type:ignore
+            )
+            return MainReturnCode.LOOP_NO_PROMPT
+        if download_url:
+            _do_auto_update()
+        print("No update package found. Opening release page.")
+        if prompt_confirm("Open the release page in your browser?"):
+            webbrowser.open(release_url)
         return MainReturnCode.LOOP_NO_PROMPT
 
     def update_all_manifests(self) -> MainReturnCode:
